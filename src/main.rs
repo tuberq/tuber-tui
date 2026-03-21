@@ -17,7 +17,7 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 
 #[derive(Parser)]
-#[command(name = "tuber-tui", about = "TUI dashboard for tuber job queue")]
+#[command(name = "tuber-tui", version, about = "TUI dashboard for tuber job queue")]
 struct Cli {
     /// Tuber server address
     #[arg(short, long, default_value = "localhost:11300")]

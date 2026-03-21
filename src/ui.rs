@@ -37,7 +37,7 @@ fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
     }
 
     let Some(snap) = &app.current else {
-        let p = Paragraph::new(" Connecting to tuber...").block(block);
+        let p = Paragraph::new(" Connecting...").block(block);
         frame.render_widget(p, area);
         return;
     };
@@ -45,9 +45,15 @@ fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
     let s = &snap.server;
     let uptime = format_uptime(s.uptime);
 
+    let server_version = if s.version.starts_with("tuber") {
+        s.version.clone()
+    } else {
+        format!("beanstalkd {}", s.version)
+    };
+
     let mut line1_spans = vec![
-        Span::styled(" v", Style::default().fg(Color::DarkGray)),
-        Span::raw(&s.version),
+        Span::styled(" ", Style::default().fg(Color::DarkGray)),
+        Span::raw(server_version),
         Span::styled(" | ", Style::default().fg(Color::DarkGray)),
         Span::raw(format!("up {uptime}")),
         Span::styled(" | ", Style::default().fg(Color::DarkGray)),
