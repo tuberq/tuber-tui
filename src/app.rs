@@ -40,7 +40,10 @@ impl App {
     pub fn server_rates(&self) -> (f64, f64, f64, f64) {
         if let (Some(cur), Some(prev)) = (&self.current, &self.previous) {
             let puts = self.rate(cur.server.cmd_put, prev.server.cmd_put);
-            let reserves = self.rate(cur.server.cmd_reserve, prev.server.cmd_reserve);
+            let reserves = self.rate(
+                cur.server.cmd_reserve + cur.server.cmd_reserve_with_timeout,
+                prev.server.cmd_reserve + prev.server.cmd_reserve_with_timeout,
+            );
             let deletes = self.rate(cur.server.cmd_delete, prev.server.cmd_delete);
             let timeouts = self.rate(cur.server.job_timeouts, prev.server.job_timeouts);
             (puts, reserves, deletes, timeouts)

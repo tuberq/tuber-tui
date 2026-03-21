@@ -21,7 +21,7 @@ pub fn render(frame: &mut Frame, app: &App) {
 fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
     let block = Block::default()
         .borders(Borders::BOTTOM)
-        .title(" tuber-tui ");
+        .title(format!(" tuber-tui v{} ", env!("CARGO_PKG_VERSION")));
 
     if let Some(ref err) = app.error {
         let text = vec![
@@ -71,17 +71,34 @@ fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
         ));
     }
 
-    let line2 = Line::from(vec![
+    let mut line2_spans = vec![
         Span::styled(" CPU: ", Style::default().fg(Color::DarkGray)),
         Span::raw(format!("u={:.2} s={:.2}", s.rusage_utime, s.rusage_stime)),
-        Span::styled(" | ", Style::default().fg(Color::DarkGray)),
-        Span::raw(format!(
-            "jobs: {} ready, {} reserved, {} delayed, {} buried",
-            s.current_jobs_ready, s.current_jobs_reserved, s.current_jobs_delayed, s.current_jobs_buried
-        )),
-    ]);
+    ];
 
-    let text = vec![Line::from(line1_spans), line2];
+    if s.rusage_maxrss > 0 {
+        line2_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+        line2_spans.push(Span::styled("RSS: ", Style::default().fg(Color::DarkGray)));
+        line2_spans.push(Span::raw(format_bytes(s.rusage_maxrss)));
+    }
+
+    line2_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+    line2_spans.push(Span::raw(format!(
+        "jobs: {} ready, {} reserved, {} delayed, {} buried",
+        s.current_jobs_ready, s.current_jobs_reserved, s.current_jobs_delayed, s.current_jobs_buried
+    )));
+
+    if s.binlog_enabled {
+        line2_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+        line2_spans.push(Span::styled("WAL: ", Style::default().fg(Color::DarkGray)));
+        line2_spans.push(Span::raw(format!(
+            "{} ({} files)",
+            format_bytes(s.binlog_total_bytes),
+            s.binlog_file_count
+        )));
+    }
+
+    let text = vec![Line::from(line1_spans), Line::from(line2_spans)];
     let p = Paragraph::new(text).block(block);
     frame.render_widget(p, area);
 }
@@ -289,6 +306,9 @@ fn render_bottom_panel(frame: &mut Frame, app: &App, area: Rect) {
             "{:.1} puts/s  {:.1} reserves/s  {:.1} deletes/s",
             puts_s, reserves_s, deletes_s
         )),
+        Span::styled("  (", Style::default().fg(Color::DarkGray)),
+        Span::raw(format!("{} total", format_number(snap.server.total_jobs))),
+        Span::styled(")", Style::default().fg(Color::DarkGray)),
     ]);
 
     let line2 = Line::from(vec![
@@ -331,6 +351,18 @@ fn format_uptime(seconds: u64) -> String {
         format!("{hours}h {mins}m")
     } else {
         format!("{mins}m")
+    }
+}
+
+fn format_bytes(bytes: u64) -> String {
+    if bytes >= 1_073_741_824 {
+        format!("{:.1}GB", bytes as f64 / 1_073_741_824.0)
+    } else if bytes >= 1_048_576 {
+        format!("{:.1}MB", bytes as f64 / 1_048_576.0)
+    } else if bytes >= 1024 {
+        format!("{:.1}KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{bytes}B")
     }
 }
 
