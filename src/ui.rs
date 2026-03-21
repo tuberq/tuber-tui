@@ -58,7 +58,7 @@ fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
         Span::raw(format!("up {uptime}")),
         Span::styled(" | ", Style::default().fg(Color::DarkGray)),
         Span::raw(format!(
-            "conns: {} (P:{} W:{} Wt:{})",
+            "conns: {} (producers:{} workers:{} waiting:{})",
             s.current_connections, s.current_producers, s.current_workers, s.current_waiting
         )),
     ];
