@@ -68,6 +68,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
+          pattern: tuber-tui-*
           merge-multiple: true
 
       - name: Create release
