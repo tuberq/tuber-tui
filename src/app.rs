@@ -36,6 +36,15 @@ impl App {
         0.0
     }
 
+    /// Get the previous total job count for a tube by name.
+    pub fn previous_tube_total(&self, name: &str) -> Option<u64> {
+        self.previous.as_ref().and_then(|snap| {
+            snap.tubes.iter().find(|t| t.name == name).map(|t| {
+                t.current_jobs_ready + t.current_jobs_reserved + t.current_jobs_delayed + t.current_jobs_buried
+            })
+        })
+    }
+
     /// Get rates for server-level throughput counters.
     pub fn server_rates(&self) -> (f64, f64, f64, f64) {
         if let (Some(cur), Some(prev)) = (&self.current, &self.previous) {

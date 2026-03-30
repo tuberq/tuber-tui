@@ -191,6 +191,10 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
                 ),
             ];
             spans.push(Span::styled(total_display, Style::default().fg(Color::DarkGray)));
+            if let Some(prev_total) = app.previous_tube_total(&tube.name) {
+                let (chevron, color) = queue_change_indicator(prev_total, total);
+                spans.push(Span::styled(format!(" {chevron}"), Style::default().fg(color)));
+            }
             lines.push(Line::from(spans));
             continue;
         }
@@ -272,6 +276,14 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
         }
 
         spans.push(Span::raw(total_display));
+
+        // Queue growth indicator
+        if let Some(prev_total) = app.previous_tube_total(&tube.name) {
+            let (chevron, color) = queue_change_indicator(prev_total, total);
+            if !chevron.is_empty() {
+                spans.push(Span::styled(format!(" {chevron}"), Style::default().fg(color)));
+            }
+        }
 
         // EWMA if available
         if tube.processing_time_ewma > 0.0 {
@@ -444,6 +456,26 @@ fn truncate_name(name: &str, max_len: usize) -> &str {
         &name[..max_len]
     } else {
         name
+    }
+}
+
+fn queue_change_indicator(prev_total: u64, curr_total: u64) -> (&'static str, Color) {
+    let diff = curr_total as i64 - prev_total as i64;
+    let abs_diff = diff.unsigned_abs();
+    let base = prev_total.max(curr_total).max(1) as f64;
+    let change_pct = (diff as f64 / base * 100.0).abs();
+
+    let is_slow = change_pct <= 1.0 && abs_diff <= 10;
+    let is_fast = (change_pct > 10.0 || abs_diff > 100) && base > 20.0;
+
+    match (diff.signum(), is_fast, is_slow) {
+        (0, _, _)      => ("—", Color::Blue),
+        (1, true, _)   => ("⇈", Color::Red),
+        (1, _, true)   => ("↑", Color::Blue),
+        (1, _, _)      => ("↑", Color::Yellow),
+        (_, true, _)   => ("⇊", Color::Green),
+        (_, _, true)   => ("↓", Color::Blue),
+        _              => ("↓", Color::Green),
     }
 }
 
