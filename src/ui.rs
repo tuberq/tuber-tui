@@ -450,8 +450,12 @@ fn truncate_name(name: &str, max_len: usize) -> &str {
 fn format_duration(seconds: f64) -> String {
     let raw = if seconds < 1.0 {
         format!("{:.0}ms", seconds * 1000.0)
-    } else {
+    } else if seconds < 600.0 {
         format!("{:.1}s", seconds)
+    } else if seconds < 3600.0 {
+        format!("{:.1}m", seconds / 60.0)
+    } else {
+        format!("{:.1}h", seconds / 3600.0)
     };
     format!("{:>6}", raw)
 }
