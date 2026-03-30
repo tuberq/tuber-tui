@@ -6,10 +6,18 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 pub fn render(frame: &mut Frame, app: &App) {
+    // Bottom panel: 3 fixed lines + 1 per tube with timing data + 2 for border/padding
+    let tubes_with_timing = app
+        .current
+        .as_ref()
+        .map(|s| s.tubes.iter().filter(|t| t.processing_time_ewma > 0.0).count())
+        .unwrap_or(0);
+    let bottom_height = 5 + tubes_with_timing as u16;
+
     let chunks = Layout::vertical([
-        Constraint::Length(4),  // top bar
-        Constraint::Min(5),    // tube chart
-        Constraint::Length(5), // bottom panel
+        Constraint::Length(4),         // top bar
+        Constraint::Min(5),            // tube chart
+        Constraint::Length(bottom_height), // bottom panel
     ])
     .split(frame.area());
 
@@ -163,12 +171,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
 
     let mut lines = Vec::new();
     for tube in sorted_tubes.iter().take(chart_height) {
-        let name = if tube.name.len() > max_name_len {
-            &tube.name[..max_name_len]
-        } else {
-            &tube.name
-        };
-        let padded_name = format!("{:>width$} ", name, width = max_name_len);
+        let padded_name = format!("{:>width$} ", truncate_name(&tube.name, max_name_len), width = max_name_len);
 
         let ready = tube.current_jobs_ready;
         let reserved = tube.current_jobs_reserved;
@@ -272,7 +275,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
         // EWMA if available
         if tube.processing_time_ewma > 0.0 {
             spans.push(Span::styled(
-                format!(" ({:.1}ms)", tube.processing_time_ewma * 1000.0),
+                format!(" ({})", format_duration(tube.processing_time_ewma)),
                 Style::default().fg(Color::DarkGray),
             ));
         }
@@ -318,32 +321,68 @@ fn render_bottom_panel(frame: &mut Frame, app: &App, area: Rect) {
         Span::styled(")", Style::default().fg(Color::DarkGray)),
     ]);
 
-    let line2 = Line::from(vec![
-        Span::styled(" Timeouts: ", Style::default().fg(Color::DarkGray)),
-        Span::raw(format!("{:.1}/s", timeouts_s)),
-        Span::styled("   EWMA: ", Style::default().fg(Color::DarkGray)),
-        Span::raw(
-            snap.tubes
-                .iter()
-                .filter(|t| t.processing_time_ewma > 0.0)
-                .map(|t| format!("{} {:.1}ms", t.name, t.processing_time_ewma * 1000.0))
-                .collect::<Vec<_>>()
-                .join(", "),
-        ),
-    ]);
+    // Single pass: collect buried total, timing tubes, and max name length
+    let mut total_buried: u64 = 0;
+    let mut max_name_len: usize = 0;
+    let mut timing_tubes: Vec<&crate::model::TubeStats> = Vec::new();
+    for t in &snap.tubes {
+        total_buried += t.current_jobs_buried;
+        if t.processing_time_ewma > 0.0 {
+            max_name_len = max_name_len.max(t.name.len());
+            timing_tubes.push(t);
+        }
+    }
+    max_name_len = max_name_len.min(20);
 
-    let total_buried: u64 = snap.tubes.iter().map(|t| t.current_jobs_buried).sum();
     let buried_style = if total_buried > 0 {
         Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::Green)
     };
-    let line3 = Line::from(vec![
-        Span::styled(" Buried: ", Style::default().fg(Color::DarkGray)),
+
+    let line2 = Line::from(vec![
+        Span::styled(" Timeouts: ", Style::default().fg(Color::DarkGray)),
+        Span::raw(format!("{:.1}/s", timeouts_s)),
+        Span::styled("  Buried: ", Style::default().fg(Color::DarkGray)),
         Span::styled(format!("{total_buried} total"), buried_style),
     ]);
 
-    let text = vec![line1, line2, line3];
+    let mut text = vec![line1, line2];
+
+    for tube in &timing_tubes {
+        let mut spans = vec![
+            Span::styled(
+                format!(" {:>width$} ", truncate_name(&tube.name, max_name_len), width = max_name_len),
+                Style::default().fg(Color::White),
+            ),
+        ];
+
+        // Bimodal EWMA
+        spans.push(Span::styled("ewma: ", Style::default().fg(Color::DarkGray)));
+        if tube.processing_time_samples_fast > 0 && tube.processing_time_samples_slow > 0 {
+            spans.push(Span::raw(format!(
+                "{} / {}",
+                format_duration(tube.processing_time_ewma_fast),
+                format_duration(tube.processing_time_ewma_slow),
+            )));
+        } else {
+            spans.push(Span::raw(format_duration(tube.processing_time_ewma)));
+        }
+
+        // Percentiles
+        if tube.processing_time_p50 > 0.0 {
+            spans.push(Span::styled("  p: ", Style::default().fg(Color::DarkGray)));
+            spans.push(Span::raw(format!(
+                "{} / {} / {}",
+                format_duration(tube.processing_time_p50),
+                format_duration(tube.processing_time_p95),
+                format_duration(tube.processing_time_p99),
+            )));
+        }
+
+        text.push(Line::from(spans));
+    }
+
     let p = Paragraph::new(text).block(block);
     frame.render_widget(p, area);
 }
@@ -370,6 +409,22 @@ fn format_bytes(bytes: u64) -> String {
         format!("{:.1}KB", bytes as f64 / 1024.0)
     } else {
         format!("{bytes}B")
+    }
+}
+
+fn truncate_name(name: &str, max_len: usize) -> &str {
+    if name.len() > max_len {
+        &name[..max_len]
+    } else {
+        name
+    }
+}
+
+fn format_duration(seconds: f64) -> String {
+    if seconds < 1.0 {
+        format!("{:.0}ms", seconds * 1000.0)
+    } else {
+        format!("{:.1}s", seconds)
     }
 }
 

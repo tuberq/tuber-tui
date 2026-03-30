@@ -86,6 +86,13 @@ pub struct TubeStats {
     pub total_reserves: u64,
     pub total_timeouts: u64,
     pub processing_time_ewma: f64,
+    pub processing_time_ewma_fast: f64,
+    pub processing_time_samples_fast: u64,
+    pub processing_time_ewma_slow: f64,
+    pub processing_time_samples_slow: u64,
+    pub processing_time_p50: f64,
+    pub processing_time_p95: f64,
+    pub processing_time_p99: f64,
     pub cmd_delete: u64,
 }
 
@@ -102,6 +109,13 @@ impl TubeStats {
             total_reserves: get_u64(&m, "cmd-reserve-with-timeout"),
             total_timeouts: get_u64(&m, "total-timeouts"),
             processing_time_ewma: get_f64(&m, "processing-time-ewma"),
+            processing_time_ewma_fast: get_f64(&m, "processing-time-ewma-fast"),
+            processing_time_samples_fast: get_u64(&m, "processing-time-samples-fast"),
+            processing_time_ewma_slow: get_f64(&m, "processing-time-ewma-slow"),
+            processing_time_samples_slow: get_u64(&m, "processing-time-samples-slow"),
+            processing_time_p50: get_f64(&m, "processing-time-p50"),
+            processing_time_p95: get_f64(&m, "processing-time-p95"),
+            processing_time_p99: get_f64(&m, "processing-time-p99"),
             cmd_delete: get_u64(&m, "cmd-delete"),
         }
     }
