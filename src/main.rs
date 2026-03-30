@@ -19,13 +19,30 @@ use tokio::sync::mpsc;
 #[derive(Parser)]
 #[command(name = "tuber-tui", version, about = "TUI dashboard for tuber job queue")]
 struct Cli {
-    /// Tuber server address
-    #[arg(short, long, default_value = "localhost:11300")]
-    addr: String,
+    /// Server address [host][:port] (default: localhost:11300)
+    #[arg(value_name = "HOST")]
+    addr: Option<String>,
 
     /// Poll interval in seconds
     #[arg(short, long, default_value = "1.5")]
     interval: f64,
+}
+
+const DEFAULT_HOST: &str = "localhost";
+const DEFAULT_PORT: &str = "11300";
+
+fn resolve_addr(input: Option<&str>) -> String {
+    let input = input.unwrap_or("").trim();
+    if input.is_empty() {
+        return format!("{DEFAULT_HOST}:{DEFAULT_PORT}");
+    }
+    if input.starts_with(':') {
+        return format!("{DEFAULT_HOST}{input}");
+    }
+    if input.contains(':') {
+        return input.to_string();
+    }
+    format!("{input}:{DEFAULT_PORT}")
 }
 
 enum PollMsg {
@@ -43,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
     let mut terminal = ratatui::init();
 
     let (tx, mut rx) = mpsc::channel::<PollMsg>(4);
-    let addr = cli.addr.clone();
+    let addr = resolve_addr(cli.addr.as_deref());
     let interval = Duration::from_secs_f64(cli.interval);
 
     // Poller task
