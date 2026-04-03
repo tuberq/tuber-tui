@@ -22,7 +22,7 @@ pub fn parse_yaml_list(yaml: &str) -> Vec<String> {
 }
 
 /// Get a string value from the map.
-pub fn get_str<'a>(map: &HashMap<&str, &'a str>, key: &str) -> String {
+pub fn get_str(map: &HashMap<&str, &str>, key: &str) -> String {
     map.get(key).unwrap_or(&"").to_string()
 }
 

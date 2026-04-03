@@ -1,0 +1,14 @@
+[package]
+name = "tuber-lib"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+
+[dependencies.serde]
+workspace = true
+optional = true
+
+[features]
+serde = ["dep:serde"]

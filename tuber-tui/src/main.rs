@@ -1,26 +1,23 @@
 mod app;
-mod client;
-mod model;
-mod parse;
 mod ui;
 
 use app::App;
 use clap::Parser;
-use client::TuberClient;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
 use futures::StreamExt;
-use model::Snapshot;
 use std::io::stdout;
 use std::time::Duration;
 use tokio::sync::mpsc;
+use tuber_lib::client::TuberClient;
+use tuber_lib::model::Snapshot;
 
 #[derive(Parser)]
 #[command(name = "tuber-tui", version, about = "TUI dashboard for tuber job queue")]
 struct Cli {
     /// Server address [host][:port] (default: localhost:11300)
-    #[arg(value_name = "HOST")]
+    #[arg(value_name = "HOST", env = "TUBER_ADDR")]
     addr: Option<String>,
 
     /// Poll interval in seconds
@@ -28,25 +25,8 @@ struct Cli {
     interval: f64,
 }
 
-const DEFAULT_HOST: &str = "localhost";
-const DEFAULT_PORT: &str = "11300";
-
-fn resolve_addr(input: Option<&str>) -> String {
-    let input = input.unwrap_or("").trim();
-    if input.is_empty() {
-        return format!("{DEFAULT_HOST}:{DEFAULT_PORT}");
-    }
-    if input.starts_with(':') {
-        return format!("{DEFAULT_HOST}{input}");
-    }
-    if input.contains(':') {
-        return input.to_string();
-    }
-    format!("{input}:{DEFAULT_PORT}")
-}
-
 enum PollMsg {
-    Snapshot(Snapshot),
+    Snapshot(Box<Snapshot>),
     Error(String),
 }
 
@@ -60,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let mut terminal = ratatui::init();
 
     let (tx, mut rx) = mpsc::channel::<PollMsg>(4);
-    let addr = resolve_addr(cli.addr.as_deref());
+    let addr = tuber_lib::resolve_addr(cli.addr.as_deref());
     let interval = Duration::from_secs_f64(cli.interval);
 
     // Poller task
@@ -70,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(mut client) => loop {
                     match client.fetch_snapshot().await {
                         Ok(snap) => {
-                            if tx.send(PollMsg::Snapshot(snap)).await.is_err() {
+                            if tx.send(PollMsg::Snapshot(Box::new(snap))).await.is_err() {
                                 return;
                             }
                         }
@@ -99,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
         tokio::select! {
             Some(msg) = rx.recv() => {
                 match msg {
-                    PollMsg::Snapshot(snap) => app.update(snap),
+                    PollMsg::Snapshot(snap) => app.update(*snap),
                     PollMsg::Error(e) => app.set_error(e),
                 }
                 terminal.draw(|f| ui::render(f, &app))?;

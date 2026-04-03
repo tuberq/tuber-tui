@@ -164,11 +164,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
     let bar_width = inner.width.saturating_sub(max_name_len as u16 + 2 + 8 + 12) as usize;
 
     let mut sorted_tubes: Vec<&_> = snap.tubes.iter().collect();
-    sorted_tubes.sort_by(|a, b| {
-        let total_a = a.current_jobs_ready + a.current_jobs_reserved + a.current_jobs_delayed + a.current_jobs_buried;
-        let total_b = b.current_jobs_ready + b.current_jobs_reserved + b.current_jobs_delayed + b.current_jobs_buried;
-        total_b.cmp(&total_a)
-    });
+    sorted_tubes.sort_by_key(|t| std::cmp::Reverse(t.current_total()));
 
     let mut lines = Vec::new();
     for tube in sorted_tubes.iter().take(chart_height) {
@@ -178,7 +174,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
         let reserved = tube.current_jobs_reserved;
         let delayed = tube.current_jobs_delayed;
         let buried = tube.current_jobs_buried;
-        let total = ready + reserved + delayed + buried;
+        let total = tube.current_total();
 
         let total_display = format!(" {:>7}", format_number(total));
 
@@ -337,7 +333,7 @@ fn render_bottom_panel(frame: &mut Frame, app: &App, area: Rect) {
     // Single pass: collect buried total, timing tubes, and max name length
     let mut total_buried: u64 = 0;
     let mut max_name_len: usize = 0;
-    let mut timing_tubes: Vec<&crate::model::TubeStats> = Vec::new();
+    let mut timing_tubes: Vec<&tuber_lib::model::TubeStats> = Vec::new();
     for t in &snap.tubes {
         total_buried += t.current_jobs_buried;
         if t.processing_time_ewma > 0.0 {

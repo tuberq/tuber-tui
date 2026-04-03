@@ -12,9 +12,11 @@ WORKDIR /src
 COPY . .
 
 RUN export $(cat /etc/environment 2>/dev/null | xargs) && \
-    cargo build --release --target $(cat /target.txt) && \
-    cp target/$(cat /target.txt)/release/tuber-tui /tuber-tui
+    cargo build --release --workspace --target $(cat /target.txt) && \
+    cp target/$(cat /target.txt)/release/tuber-tui /tuber-tui && \
+    cp target/$(cat /target.txt)/release/tuber-cli /tuber-cli
 
 FROM scratch
 COPY --from=builder /tuber-tui /tuber-tui
+COPY --from=builder /tuber-cli /tuber-cli
 ENTRYPOINT ["/tuber-tui"]

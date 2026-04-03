@@ -2,6 +2,7 @@ use crate::parse::{get_bool, get_f64, get_str, get_u64, parse_yaml_map};
 use std::time::Instant;
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(dead_code)]
 pub struct ServerStats {
     pub version: String,
@@ -80,6 +81,7 @@ impl ServerStats {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(dead_code)]
 pub struct TubeStats {
     pub name: String,
@@ -103,6 +105,10 @@ pub struct TubeStats {
 }
 
 impl TubeStats {
+    pub fn current_total(&self) -> u64 {
+        self.current_jobs_ready + self.current_jobs_reserved + self.current_jobs_delayed + self.current_jobs_buried
+    }
+
     pub fn from_yaml(yaml: &str) -> Self {
         let m = parse_yaml_map(yaml);
         Self {
@@ -129,8 +135,10 @@ impl TubeStats {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Snapshot {
     pub server: ServerStats,
     pub tubes: Vec<TubeStats>,
+    #[cfg_attr(feature = "serde", serde(skip, default = "Instant::now"))]
     pub fetched_at: Instant,
 }

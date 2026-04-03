@@ -1,0 +1,13 @@
+[package]
+name = "tuber-tui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tuber-lib = { workspace = true }
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+tokio = { workspace = true }
+clap = { workspace = true }
+futures = "0.3"
+anyhow = { workspace = true }

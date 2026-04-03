@@ -1,4 +1,4 @@
-use crate::model::Snapshot;
+use tuber_lib::model::Snapshot;
 
 pub struct App {
     pub current: Option<Snapshot>,
@@ -39,9 +39,7 @@ impl App {
     /// Get the previous total job count for a tube by name.
     pub fn previous_tube_total(&self, name: &str) -> Option<u64> {
         self.previous.as_ref().and_then(|snap| {
-            snap.tubes.iter().find(|t| t.name == name).map(|t| {
-                t.current_jobs_ready + t.current_jobs_reserved + t.current_jobs_delayed + t.current_jobs_buried
-            })
+            snap.tubes.iter().find(|t| t.name == name).map(|t| t.current_total())
         })
     }
 

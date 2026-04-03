@@ -1,0 +1,12 @@
+[package]
+name = "tuber-cli"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tuber-lib = { workspace = true, features = ["serde"] }
+tokio = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
