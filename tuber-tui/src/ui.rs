@@ -180,7 +180,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
 
         if total == 0 {
             let mut spans = vec![
-                Span::styled(padded_name, Style::default().fg(Color::White)),
+                Span::raw(padded_name),
                 Span::styled(
                     "·".repeat(bar_width.min(3)),
                     Style::default().fg(Color::DarkGray),
@@ -252,7 +252,7 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
             }
         }
 
-        let mut spans = vec![Span::styled(padded_name, Style::default().fg(Color::White))];
+        let mut spans = vec![Span::raw(padded_name)];
 
         for (i, (label, _min_w, fg, bg)) in segments.iter().enumerate() {
             let w = widths[i];
@@ -382,7 +382,7 @@ fn render_bottom_panel(frame: &mut Frame, app: &App, area: Rect) {
             let mut spans = vec![
                 Span::styled(
                     format!(" {:>width$} ", truncate_name(&tube.name, max_name_len), width = max_name_len),
-                    Style::default().fg(Color::White),
+                    Style::default(),
                 ),
             ];
 
