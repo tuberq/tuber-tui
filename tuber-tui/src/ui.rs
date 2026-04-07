@@ -170,7 +170,8 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
     for tube in sorted_tubes.iter().take(chart_height) {
         let padded_name = format!("{:>width$} ", truncate_name(&tube.name, max_name_len), width = max_name_len);
 
-        let ready = tube.current_jobs_ready;
+        let urgent = tube.current_jobs_urgent;
+        let ready = tube.current_jobs_ready.saturating_sub(urgent);
         let reserved = tube.current_jobs_reserved;
         let delayed = tube.current_jobs_delayed;
         let buried = tube.current_jobs_buried;
@@ -196,8 +197,10 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
         }
 
         // Build per-status data: (count, label, fg_color, bg_color)
-        let statuses: [(u64, Color, Color); 4] = [
+        let orange = Color::Rgb(255, 165, 0);
+        let statuses: [(u64, Color, Color); 5] = [
             (ready, Color::Black, Color::Green),
+            (urgent, Color::Black, orange),
             (reserved, Color::Black, Color::Yellow),
             (delayed, Color::White, Color::Blue),
             (buried, Color::White, Color::Red),
@@ -299,6 +302,8 @@ fn render_tube_chart(frame: &mut Frame, app: &App, area: Rect) {
     let legend = Line::from(vec![
         Span::styled(" █", Style::default().fg(Color::Green)),
         Span::raw(" Ready  "),
+        Span::styled("█", Style::default().fg(Color::Rgb(255, 165, 0))),
+        Span::raw(" Urgent  "),
         Span::styled("█", Style::default().fg(Color::Yellow)),
         Span::raw(" Reserved  "),
         Span::styled("█", Style::default().fg(Color::Blue)),

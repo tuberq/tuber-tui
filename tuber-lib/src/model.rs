@@ -85,6 +85,7 @@ impl ServerStats {
 #[allow(dead_code)]
 pub struct TubeStats {
     pub name: String,
+    pub current_jobs_urgent: u64,
     pub current_jobs_ready: u64,
     pub current_jobs_reserved: u64,
     pub current_jobs_delayed: u64,
@@ -113,6 +114,7 @@ impl TubeStats {
         let m = parse_yaml_map(yaml);
         Self {
             name: get_str(&m, "name"),
+            current_jobs_urgent: get_u64(&m, "current-jobs-urgent"),
             current_jobs_ready: get_u64(&m, "current-jobs-ready"),
             current_jobs_reserved: get_u64(&m, "current-jobs-reserved"),
             current_jobs_delayed: get_u64(&m, "current-jobs-delayed"),
