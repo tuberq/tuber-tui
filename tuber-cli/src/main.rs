@@ -182,9 +182,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Command::Put { body, tube, priority, delay, ttr } => {
-            if tube != "default" {
-                client.use_tube(&tube).await?;
-            }
+            client.use_tube(&tube).await?;
             let data = match body {
                 Some(b) => b,
                 None => {
@@ -222,25 +220,19 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Command::PeekReady { tube } => {
-            if tube != "default" {
-                client.use_tube(&tube).await?;
-            }
+            client.use_tube(&tube).await?;
             let (id, body) = client.peek_ready().await?;
             output(&cli.format, &serde_json::json!({ "id": id, "body": body }))?;
         }
 
         Command::PeekBuried { tube } => {
-            if tube != "default" {
-                client.use_tube(&tube).await?;
-            }
+            client.use_tube(&tube).await?;
             let (id, body) = client.peek_buried().await?;
             output(&cli.format, &serde_json::json!({ "id": id, "body": body }))?;
         }
 
         Command::PeekDelayed { tube } => {
-            if tube != "default" {
-                client.use_tube(&tube).await?;
-            }
+            client.use_tube(&tube).await?;
             let (id, body) = client.peek_delayed().await?;
             output(&cli.format, &serde_json::json!({ "id": id, "body": body }))?;
         }
@@ -261,16 +253,9 @@ async fn main() -> anyhow::Result<()> {
         }
 
         Command::DeleteBatch { ids } => {
-            let mut deleted = Vec::new();
-            let mut errors = Vec::new();
-            for id in &ids {
-                match client.delete(*id).await {
-                    Ok(()) => deleted.push(*id),
-                    Err(e) => errors.push(serde_json::json!({ "id": id, "error": e.to_string() })),
-                }
-            }
-            output(&cli.format, &serde_json::json!({ "deleted": deleted, "errors": errors }))?;
-            if !errors.is_empty() {
+            let (deleted, not_found) = client.delete_batch(&ids).await?;
+            output(&cli.format, &serde_json::json!({ "deleted": deleted, "not_found": not_found }))?;
+            if not_found > 0 {
                 std::process::exit(1);
             }
         }

@@ -152,6 +152,23 @@ impl TuberClient {
         self.read_u64_response("FLUSHED").await
     }
 
+    /// Delete multiple jobs in a single command.
+    /// Sends: `delete-batch <id1> <id2> ...\r\n` — expects: `DELETED_BATCH <deleted> <not_found>\r\n`
+    pub async fn delete_batch(&mut self, ids: &[u64]) -> io::Result<(u64, u64)> {
+        let id_strs: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
+        self.send_line(&format!("delete-batch {}", id_strs.join(" "))).await?;
+        let line = self.read_line().await?;
+        if let Some(rest) = line.strip_prefix("DELETED_BATCH ") {
+            let parts: Vec<&str> = rest.split_whitespace().collect();
+            if parts.len() == 2 {
+                let deleted: u64 = parts[0].parse().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+                let not_found: u64 = parts[1].parse().map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+                return Ok((deleted, not_found));
+            }
+        }
+        Err(io::Error::other(line))
+    }
+
     /// Bury a reserved job.
     /// Sends: `bury <id> <priority>\r\n` — expects: `BURIED\r\n`
     pub async fn bury(&mut self, id: u64, priority: u32) -> io::Result<()> {
