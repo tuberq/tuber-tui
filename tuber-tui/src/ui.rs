@@ -15,9 +15,22 @@ pub fn render(frame: &mut Frame, app: &App) {
     let header_row = if tubes_with_timing > 0 { 1 } else { 0 };
     let bottom_height = 5 + header_row + tubes_with_timing as u16;
 
+    let has_storage_line = app
+        .current
+        .as_ref()
+        .map(|s| {
+            let srv = &s.server;
+            srv.binlog_enabled
+                || srv.toast_segments > 0
+                || srv.toast_total_bytes > 0
+                || srv.max_storage_bytes > 0
+        })
+        .unwrap_or(false);
+    let top_height = if has_storage_line { 5 } else { 4 };
+
     let chunks = Layout::vertical([
-        Constraint::Length(4),         // top bar
-        Constraint::Min(5),            // tube chart
+        Constraint::Length(top_height), // top bar
+        Constraint::Min(5),              // tube chart
         Constraint::Length(bottom_height), // bottom panel
     ])
     .split(frame.area());
@@ -125,17 +138,70 @@ fn render_top_bar(frame: &mut Frame, app: &App, area: Rect) {
         s.current_jobs_ready, s.current_jobs_reserved, s.current_jobs_delayed, s.current_jobs_buried
     )));
 
+    let mut line3_spans: Vec<Span> = Vec::new();
+
     if s.binlog_enabled {
-        line2_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
-        line2_spans.push(Span::styled("WAL: ", Style::default().fg(Color::DarkGray)));
-        line2_spans.push(Span::raw(format!(
+        line3_spans.push(Span::styled(" WAL: ", Style::default().fg(Color::DarkGray)));
+        line3_spans.push(Span::raw(format!(
             "{} ({} files)",
             format_bytes(s.binlog_total_bytes),
             s.binlog_file_count
         )));
     }
 
-    let text = vec![Line::from(line1_spans), Line::from(line2_spans)];
+    if s.toast_segments > 0 || s.toast_total_bytes > 0 {
+        if line3_spans.is_empty() {
+            line3_spans.push(Span::styled(" TOAST: ", Style::default().fg(Color::DarkGray)));
+        } else {
+            line3_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+            line3_spans.push(Span::styled("TOAST: ", Style::default().fg(Color::DarkGray)));
+        }
+        let live_frag = if s.toast_total_bytes > 0 {
+            let pct = s.toast_live_bytes as f64 / s.toast_total_bytes as f64 * 100.0;
+            format!(
+                "{} / {} ({:.0}% live, {} segs)",
+                format_bytes(s.toast_live_bytes),
+                format_bytes(s.toast_total_bytes),
+                pct,
+                s.toast_segments
+            )
+        } else {
+            format!("{} segs", s.toast_segments)
+        };
+        line3_spans.push(Span::raw(live_frag));
+    }
+
+    if s.max_storage_bytes > 0 {
+        let used = s.binlog_total_bytes + s.toast_total_bytes;
+        let pct = used as f64 / s.max_storage_bytes as f64 * 100.0;
+        let color = if pct >= 90.0 {
+            Color::Red
+        } else if pct >= 70.0 {
+            Color::Yellow
+        } else {
+            Color::Green
+        };
+        if line3_spans.is_empty() {
+            line3_spans.push(Span::raw(" "));
+        } else {
+            line3_spans.push(Span::styled(" | ", Style::default().fg(Color::DarkGray)));
+        }
+        line3_spans.push(Span::styled("Disk: ", Style::default().fg(Color::DarkGray)));
+        line3_spans.push(Span::styled(
+            format!(
+                "{} / {} ({:.1}%)",
+                format_bytes(used),
+                format_bytes(s.max_storage_bytes),
+                pct
+            ),
+            Style::default().fg(color),
+        ));
+    }
+
+    let mut text = vec![Line::from(line1_spans), Line::from(line2_spans)];
+    if !line3_spans.is_empty() {
+        text.push(Line::from(line3_spans));
+    }
     let p = Paragraph::new(text).block(block);
     frame.render_widget(p, area);
 }
