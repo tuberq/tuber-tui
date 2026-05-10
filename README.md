@@ -62,9 +62,8 @@ tuber-cli stats --format text
 
 | Option | Default | Description |
 |---|---|---|
-| `-a, --addr` | `localhost:11300` | Server address |
+| `-a, --addr` | `$TUBER_ADDR` or `localhost:11300` | Server address |
 | `-f, --format` | `json` | Output format: `json` or `text` |
-| `TUBER_ADDR` env var | — | Fallback server address (useful in `.envrc`) |
 
 ## tuber-tui
 
@@ -97,7 +96,7 @@ cargo install --path tuber-tui
 ### Usage
 
 ```bash
-tuber-tui                        # connects to localhost:11300
+tuber-tui                        # connects to TUBER_TUI or localhost:11300
 tuber-tui staging.example.com    # custom host
 tuber-tui :11301                 # custom port
 tuber-tui -i 0.5                 # faster polling (0.5s)
@@ -105,9 +104,8 @@ tuber-tui -i 0.5                 # faster polling (0.5s)
 
 | Option | Default | Description |
 |---|---|---|
-| `[HOST]` positional | `localhost:11300` | Server address |
+| `[HOST]` positional | `$TUBER_ADDR` or `localhost:11300` | Server address |
 | `-i, --interval` | `1.5` | Poll interval (seconds) |
-| `TUBER_ADDR` env var | — | Fallback server address |
 
 Press `q` to quit.
 

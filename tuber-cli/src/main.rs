@@ -93,7 +93,9 @@ enum Command {
         id: u64,
     },
 
-    /// Peek at the next ready job in a tube
+    /// Peek at the next ready job in a tube.
+    ///
+    /// Stateless: --tube is required (no implicit "use" state from prior commands).
     PeekReady {
         /// Tube to use
         #[arg(long, default_value = "default")]
