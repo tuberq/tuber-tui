@@ -237,9 +237,10 @@ impl JobStats {
 #[allow(dead_code)]
 pub struct GroupStats {
     pub name: String,
-    pub pending: u64,
+    pub ready: u64,
+    pub reserved: u64,
+    pub delayed: u64,
     pub buried: u64,
-    pub complete: bool,
     pub waiting_jobs: u64,
 }
 
@@ -248,9 +249,10 @@ impl GroupStats {
         let m = parse_yaml_map(yaml);
         Self {
             name: get_str(&m, "name"),
-            pending: get_u64(&m, "pending"),
+            ready: get_u64(&m, "ready"),
+            reserved: get_u64(&m, "reserved"),
+            delayed: get_u64(&m, "delayed"),
             buried: get_u64(&m, "buried"),
-            complete: get_bool(&m, "complete"),
             waiting_jobs: get_u64(&m, "waiting-jobs"),
         }
     }
